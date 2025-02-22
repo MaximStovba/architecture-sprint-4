@@ -1,0 +1,36 @@
+@startuml
+
+' Sequence Diagram for Order List Retrieval and Status Update
+
+title MES API Order List Retrieval and Status Update (with Caching)
+
+actor Operator
+participant MES_UI
+participant MESAPI
+participant Redis
+participant MESDB
+
+== Order List Retrieval ==
+Operator -> MES_UI: Request order list
+MES_UI -> MESAPI: Fetch order list
+MESAPI -> Redis: Check cache for order list
+alt Cache Hit
+  Redis -> MESAPI: Return cached order list
+else Cache Miss
+  MESAPI -> MESDB: Query order list from DB
+  MESDB -> MESAPI: Return order list
+  MESAPI -> Redis: Store order list in cache (Cache-Aside)
+end
+MESAPI -> MES_UI: Return order list
+MES_UI -> Operator: Display order list
+
+== Order Status Update ==
+Operator -> MES_UI: Update order status
+MES_UI -> MESAPI: Send status update
+MESAPI -> Redis: Update cache (Write-Through)
+MESAPI -> MESDB: Persist new status in DB
+MESDB -> MESAPI: Confirm update
+MESAPI -> MES_UI: Confirm update
+MES_UI -> Operator: Display updated status
+
+@enduml
